@@ -1,0 +1,135 @@
+---
+title: "Homework 3"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+#### Q1 
+
+1. Suppose that we wish to predict whether a given stock will issue a dividend this year (“Yes” or “No”) based on X, last year’s percent proﬁt. We examine a large number of companies and discover that the mean value of X for companies that issued a dividend was $\bar{x}$  = 10, while the mean for those that didn’t was $\bar{x}$ = 0. In addition, the variance of X for these two sets of companies was $\sigma^2$= 36. Finally, 80% of companies issued dividends. Assuming that X follows a normal distribution, predict the probability that a company will issue a dividend this year given that its percentage proﬁt was X = 4 last year. 
+
+	(a) Write down what is  P(X | Dividend = Yes) (3 marks)   
+	The probability density function for last year's percent profit that comes from a company who will issue a dividend this year. 
+	
+	(b) Write down what is  P(X | Dividend = No) (3 marks)   
+	The probability density function for laset year's percent profit that comes from a company who will not issue a dividend this year. 
+	
+	(c) Use dnorm() function in R to calculate conditional probabilities in a) and b) when X = 4 (4 marks, 2 marks each)
+```{r}
+dnorm(4, mean=10, sd= 6) #conditional probability in (a)
+```
+```{r}
+dnorm(4, mean=0, sd= 6) #conditional probability in (b)
+```
+	
+(d) What is the value of P(Dividend = Yes)? (2 marks)   
+80%
+  
+(e) What is the value of P( Dividend = No)? (2 marks)   
+20%
+   
+(f) Now predict the probability that a company will issue a dividend this year given that its percentage proﬁt was X = 4 last year. Hint: Use Bayes’ rule as we discussed in the class. (6 marks)   
+By Bayes Theorm, 
+
+$Pr(Dividend=Yes|X=4) = \frac{\pi_1 f_1(x)}{\pi_1f_1(x)+\pi_2f_2(x)}= \frac{0.8*0.0403}{0.8*0.0403+0.2*0.0532} =  75.14 \%$
+
+#### Q2   
+   
+In this problem, you will develop a model to predict whether a given car gets high or low gas mileage based on the Auto data set.
+
+(a) Create a binary variable, mpg01, that contains a 1 if mpg contains a value above its median, and a 0 if mpg contains a value below its median. You can compute the median using the median() function in R. Note you may ﬁnd it helpful to use the data.frame() function to create a single data set containing both mpg01 and the other Auto variables. (2 marks) 
+```{r}
+library(ISLR)
+summary(Auto)
+```
+
+
+```{r}
+attach(Auto)
+```
+
+
+```{r}
+median(mpg)
+mpg01 = rep(0, length(mpg))
+mpg01[mpg>median(mpg)]=1
+Auto_2 <- data.frame(Auto,mpg01)
+```
+
+
+ (b) Which of the continuous features seem most likely to be useful in predicting mpg? Use cor() function in R and consider features with correlation coefficients > 0.6 as useful in predicting. (2 marks)   
+```{r}
+cor(Auto_2[, -9])
+```
+As we can see, the useful feasures are displacement, horsepower, weight which have correlations with |mpg01| > 0.6.
+
+
+(c) Split the data into a training set and a test set holding 30% of data for testing. Use sample.split() function in the library ‘caTools’ in R to split the data with the random seed 101. Use set.seed() function in R to assign the random seed. (3 marks)
+```{r}
+library(caTools)
+set.seed(101)
+sample = sample.split(1:nrow(Auto_2), SplitRatio=0.3)
+test = subset(Auto_2, sample==TRUE)
+train = subset(Auto_2, sample==FALSE)
+```
+
+(d) Perform LDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg in (b). You may not include mpg as it was used to derive mpg01. What is the test error of the model obtained? Use lda() function in the library ‘MASS’ in R.(3 marks)
+```{r}
+library(MASS)
+lda.fit=lda(mpg01~weight+displacement+horsepower,data=train)
+lda.pred = predict(lda.fit, test)
+mean(lda.pred$class != test$mpg01)
+```
+The test error by LDA is 13.67%. 
+
+(e) Perform QDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg in (b). You may not include mpg as it was used to derive mpg01. What is the test error of the model obtained? Use qda() function in the library ‘MASS’ in R (3 marks)
+  
+```{r}
+qda.fit=qda(mpg01~weight+displacement+horsepower,data=train)
+qda.pred = predict(qda.fit, test)
+mean(qda.pred$class != test$mpg01)
+```
+The test error by QDA is 12.82%.
+
+(f) Perform logistic regression on the training data in order to predict mpg01 using the variables that seemed most associated with mpg in (b). You may not include mpg as it was used to derive mpg01. What is the test error of the model obtained? (3 marks)   
+```{r}
+glm.fit=glm(mpg01~weight+displacement+horsepower,family=binomial,data=train)
+glm.probs=predict(glm.fit, test, type="response")
+glm.pred=rep(0,length(glm.probs))
+glm.pred[glm.probs > 0.5] = 1
+mean(glm.pred != test$mpg01)
+```
+The test error by logistic regression is 14.53%.
+
+(g) Perform KNN on the training data, with several values of K (use K=1, K=5, K=10, K=15, K=20, K=30, K=50, K=100, K=150, K=200) in order to predict mpg01. Use only the variables that seemed most associated with mpg in (b). You may not include mpg as it was used to derive mpg01. Obtain test errors corresponds to each K. Which value of K seems to perform the best on this data set? Use knn() function in the library (4 marks)
+
+```{r}
+library(class)
+train2=cbind(train$weight,train$displacement,train$horsepower)
+test2=cbind(test$weight,test$displacement,test$horsepower)
+knn.1=mean(knn(train2,test2, train$mpg01,k=1) != test$mpg01)
+knn.5=mean(knn(train2,test2, train$mpg01,k=5) != test$mpg01)
+knn.10=mean(knn(train2,test2, train$mpg01,k=10) != test$mpg01)
+knn.15=mean(knn(train2,test2, train$mpg01,k=15) != test$mpg01)
+knn.20=mean(knn(train2,test2, train$mpg01,k=20) != test$mpg01)
+knn.30=mean(knn(train2,test2, train$mpg01,k=30) != test$mpg01)
+knn.50=mean(knn(train2,test2, train$mpg01,k=50) != test$mpg01)
+knn.100=mean(knn(train2,test2, train$mpg01,k=100) != test$mpg01)
+knn.150=mean(knn(train2,test2, train$mpg01,k=150) != test$mpg01)
+knn.200=mean(knn(train2,test2, train$mpg01,k=200) != test$mpg01)
+
+knn.1
+knn.5
+knn.10
+knn.15
+knn.20
+knn.30
+knn.50
+knn.100
+knn.150
+knn.200
+```
+
+Thus, K=20  performs better than other values of K. 
+
+
